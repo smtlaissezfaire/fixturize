@@ -14,6 +14,8 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = "random"
 
+  config.raise_errors_for_deprecations!
+
   def wipe_db
     MongoMapper.database.collections.each do |c|
       unless (c.name =~ /system/ || Fixturize.collections.include?(c.name))
