@@ -50,6 +50,7 @@ PLATFORMS
 
 DEPENDENCIES
   bson_ext
+  mongo
   mongo_mapper
   rspec
   rspec-autotest
