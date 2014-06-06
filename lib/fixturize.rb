@@ -57,7 +57,7 @@ class Fixturize
     end
 
     def clear_cache!
-      MongoMapper.database.collections.each do |c|
+      database.collections.each do |c|
         if c.name == /mongo_saved_/
           c.drop
         end
@@ -78,7 +78,7 @@ class Fixturize
         obj = context.instance_variable_get(ivar)
 
         # TODO: Use duck typing?
-        if obj.kind_of?(MongoMapper::Document)
+        if defined?(MongoMapper) && obj.kind_of?(MongoMapper::Document)
           saved_ivars_collection.insert({
             :name => current_instrumentation,
             :ivar => ivar,
