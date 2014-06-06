@@ -1,7 +1,7 @@
 require 'mongo'
 require 'yaml'
 
-class MongoSavedContext
+class Fixturize
   METHODS_FOR_INSTRUMENTATION = [
     :save,
     :insert,
@@ -53,7 +53,7 @@ class MongoSavedContext
       if database
         database.collection(collection_name)
       else
-        raise "MongoSavedContext is not yet setup!  Make sure the database is set!"
+        raise "Fixturize is not yet setup!  Make sure the database is set!"
       end
     end
 
@@ -106,7 +106,7 @@ class MongoSavedContext
             alias_method :#{method_name}_aliased_from_mongo_saved_context, :#{method_name}
 
             def #{method_name}(*args, &block)
-              MongoSavedContext.instrument(@name, :#{method_name}, *args, &block)
+              Fixturize.instrument(@name, :#{method_name}, *args, &block)
               #{method_name}_aliased_from_mongo_saved_context(*args, &block)
             end
           end
@@ -128,5 +128,5 @@ class MongoSavedContext
 end
 
 if defined?(MongoMapper && MongoMapper.database)
-  MongoSavedContext.database = MongoMapper.database
+  Fixturize.database = MongoMapper.database
 end

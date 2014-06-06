@@ -5,7 +5,7 @@ require 'mongo_mapper'
 MongoMapper.connection = Mongo::Connection.new('localhost')
 MongoMapper.database = "fixturize"
 
-require File.join(File.dirname(__FILE__), '..', 'lib', 'mongo_saved_context')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'fixturize')
 
 RSpec.configure do |config|
   # Run specs in random order to surface order dependencies. If you find an
@@ -16,7 +16,7 @@ RSpec.configure do |config|
 
   def wipe_db
     MongoMapper.database.collections.each do |c|
-      unless (c.name =~ /system/ || MongoSavedContext.collections.include?(c.name))
+      unless (c.name =~ /system/ || Fixturize.collections.include?(c.name))
         c.drop()
       end
     end

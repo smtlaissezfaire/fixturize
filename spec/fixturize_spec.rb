@@ -1,12 +1,12 @@
 require 'spec_helper'
 
-describe MongoSavedContext do
+describe Fixturize do
   before do
     @db = MongoMapper.database
 
     @users = @db.collection('users_for_mongo_saved_contexts')
 
-    @context = MongoSavedContext
+    @context = Fixturize
     @context.database = @db
     @context.refresh!
     @context.reset_version!
