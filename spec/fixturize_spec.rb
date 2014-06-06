@@ -6,27 +6,26 @@ describe Fixturize do
 
     @users = @db.collection('users_for_mongo_saved_contexts')
 
-    @context = Fixturize
-    @context.database = @db
-    @context.refresh!
-    @context.reset_version!
+    Fixturize.database = @db
+    Fixturize.refresh!
+    Fixturize.reset_version!
   end
 
   it "should be able to take a block (and do nothing)" do
     lambda {
-      @context.fixturize "some name" do
+      fixturize "some name" do
       end
     }.should_not raise_error
   end
 
   it "should be able to fixturize some data" do
-    @context.fixturize "insert users" do
+    fixturize "insert users" do
       @users.insert({ :first_name => "Scott" })
     end
 
     @users.drop()
 
-    @context.fixturize "insert users" do
+    fixturize "insert users" do
       @users.insert({ :first_name => "Scott" })
     end
 
@@ -34,7 +33,7 @@ describe Fixturize do
   end
 
   it "should not run the block the second time around" do
-    @context.fixturize "insert users" do
+    fixturize "insert users" do
       @users.insert({ :first_name => "Scott" })
     end
 
@@ -42,7 +41,7 @@ describe Fixturize do
 
     @block_run = false
 
-    @context.fixturize "insert users" do
+    fixturize "insert users" do
       @block_run = true
       @users.insert({ :first_name => "Scott" })
     end
@@ -51,7 +50,7 @@ describe Fixturize do
   end
 
   it "should return the value of the block when newly created" do
-    val = @context.fixturize "foo" do
+    val = fixturize "foo" do
       1
     end
 
@@ -61,30 +60,30 @@ describe Fixturize do
   it "should work with an update" do
     @users.insert({ :first_name => "Scott" })
 
-    @context.fixturize "change name" do
+    fixturize "change name" do
       @users.update({}, { :last_name => "Taylor" })
     end
 
     @users.drop()
 
     @users.insert({ :first_name => "Scott" })
-    @context.fixturize "change name"
+    fixturize "change name"
 
     @users.find().to_a[0]['last_name'].should == "Taylor"
   end
 
   it "should be able to remove the updates for all contexts" do
-    @context.fixturize "insert user" do
+    fixturize "insert user" do
       @users.insert({ :first_name => "First Name" })
     end
 
     @users.drop()
 
-    @context.refresh!
+    Fixturize.refresh!
 
     block_run = false
 
-    @context.fixturize "insert user" do
+    fixturize "insert user" do
       @users.insert({ :first_name => "Scott" })
       block_run = true
     end
@@ -95,19 +94,19 @@ describe Fixturize do
   end
 
   it "should be able to just reload one fixturized block" do
-    @context.fixturize "insert user" do
+    fixturize "insert user" do
       @users.insert({ :first_name => "Scott" })
     end
-    @context.fixturize "update user" do
+    fixturize "update user" do
       @users.update({ :first_name => "Scott" }, { :last_name => "Taylor" })
     end
 
     @users.drop()
 
-    @context.refresh!("update user")
+    Fixturize.refresh!("update user")
 
-    @context.fixturize "insert user"
-    @context.fixturize "update user" do
+    fixturize "insert user"
+    fixturize "update user" do
       @users.update({ :first_name => "Scott" }, { :last_name => "Baylor" })
     end
 
@@ -116,22 +115,22 @@ describe Fixturize do
   end
 
   it "should be at version 0 by default" do
-    @context.database_version.should == 0
+    Fixturize.database_version.should == 0
   end
 
   it "should be able to bump the version" do
-    @context.database_version = 1
-    @context.database_version.should == 1
+    Fixturize.database_version = 1
+    Fixturize.database_version.should == 1
   end
 
   it "should use the version number in the database table name" do
-    @context.collection_name.should == "mongo_saved_contexts_0_"
+    Fixturize.collection_name.should == "mongo_saved_contexts_0_"
 
-    @context.database_version = 99
-    @context.collection_name.should == "mongo_saved_contexts_99_"
+    Fixturize.database_version = 99
+    Fixturize.collection_name.should == "mongo_saved_contexts_99_"
   end
 
   it "should have a list of all the collections it uses" do
-    @context.collections.should == ["mongo_saved_contexts_0_"]
+    Fixturize.collections.should == ["mongo_saved_contexts_0_"]
   end
 end

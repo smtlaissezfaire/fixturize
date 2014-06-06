@@ -127,6 +127,10 @@ class Fixturize
   end
 end
 
+def fixturize(*args, &block)
+  Fixturize.fixturize(*args, &block)
+end
+
 if defined?(MongoMapper && MongoMapper.database)
   Fixturize.database = MongoMapper.database
 end
