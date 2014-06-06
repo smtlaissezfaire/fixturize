@@ -1,5 +1,12 @@
 require 'spec_helper'
 
+class User
+  include MongoMapper::Document
+
+  key :first_name, String
+  key :last_name, String
+end
+
 describe Fixturize do
   before do
     @db = MongoMapper.database
@@ -131,6 +138,63 @@ describe Fixturize do
   end
 
   it "should have a list of all the collections it uses" do
-    expect(Fixturize.collections).to eq(["mongo_saved_contexts_0_"])
+    expect(Fixturize.collections).to eq(["mongo_saved_contexts_0_", "mongo_saved_ivars_0_"])
+  end
+
+  describe "with ivars" do
+    it "should have access to ivars" do
+      fixturize do
+        @user = User.create!(:first_name => "Scott")
+      end
+
+      expect(@user.class).to eq(User)
+      expect(@user.first_name).to eq("Scott")
+    end
+
+    it "should have access to ivars even when it is cached" do
+      fixturize "creating scott" do
+        @user = User.create!(:first_name => "Scott")
+      end
+
+      @user.destroy # must delete the data so we don't get invalid keys in mongo
+      @user = nil
+      block_run = false
+
+      fixturize "creating scott" do
+        block_run = true
+        @user = User.create!(:first_name => "Scott")
+      end
+
+      expect(block_run).to eq(false)
+      expect(@user).to_not eq(nil)
+      expect(@user.class).to eq(User)
+      expect(@user.first_name).to eq("Scott")
+    end
+
+    it "should be able to access many ivars" do
+      fixturize "creating composers" do
+        @bach = User.create!(:first_name => "Johann")
+        @beethoven = User.create!(:first_name => "Ludwig")
+      end
+
+      @bach.destroy
+      @beethoven.destroy
+      @bach = nil
+      @beethoven = nil
+      block_run = false
+
+      fixturize "creating composers" do
+        block_run = true
+      end
+
+      expect(block_run).to eq(false)
+      expect(@bach).to_not eq(nil)
+      expect(@bach.class).to eq(User)
+      expect(@bach.first_name).to eq("Johann")
+      expect(@beethoven).to_not eq(nil)
+      expect(@beethoven.class).to eq(User)
+      expect(@beethoven.first_name).to eq("Ludwig")
+    end
+
   end
 end

@@ -1,5 +1,6 @@
 require 'mongo'
 require 'yaml'
+require 'set'
 
 class Fixturize
   METHODS_FOR_INSTRUMENTATION = [
@@ -25,36 +26,82 @@ class Fixturize
     end
 
     def collections
-      [db_updates_collection_name]
+      [
+        db_updates_collection_name,
+        db_saved_ivars_collection_name,
+      ]
     end
 
     def db_updates_collection_name
       "mongo_saved_contexts_#{database_version}_"
     end
 
+    def db_saved_ivars_collection_name
+      "mongo_saved_ivars_#{database_version}_"
+    end
+
     def saved_contexts_collection
-      if database
-        database.collection(db_updates_collection_name)
-      else
+      if !database
         raise "Fixturize is not yet setup!  Make sure the database is set!"
       end
+
+      database.collection(db_updates_collection_name)
+    end
+
+    def saved_ivars_collection
+      if !database
+        raise "Fixturize is not yet setup!  Make sure the database is set!"
+      end
+
+      database.collection(db_saved_ivars_collection_name)
     end
 
     def clear_cache!
       MongoMapper.database.collections.each do |c|
-        if c.name == /mongo_saved_contexts_/
+        if c.name == /mongo_saved_/
           c.drop
         end
       end
     end
 
-    def instrument(collection_name, method_name, *args)
+    def instrument_database(collection_name, method_name, *args)
       saved_contexts_collection.insert_aliased_from_mongo_saved_context({
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
         :args => YAML.dump(args)
       })
+    end
+
+    def instrument_ivars(ivars, context)
+      ivars.each do |ivar|
+        obj = context.instance_variable_get(ivar)
+
+        # TODO: Use duck typing?
+        if obj.kind_of?(MongoMapper::Document)
+          saved_ivars_collection.insert({
+            :name => current_instrumentation,
+            :ivar => ivar,
+            :model => obj.class.to_s,
+            :id => obj.id
+          })
+        end
+      end
+    end
+
+    def load_data_from(instrumentation)
+      collection = database.collection(instrumentation['collection_name'])
+      collection.send(instrumentation['method_name'], *YAML.load(instrumentation['args']))
+    end
+
+    def load_ivars_from(instrumentation, target_obj)
+      ivar = instrumentation['ivar']
+      model_str = instrumentation['model']
+      id = instrumentation['id']
+
+      model = Object.const_get(model_str)
+      obj = model.find(id)
+      target_obj.instance_variable_set(ivar, obj)
     end
 
     def refresh!(name = nil)
@@ -77,40 +124,57 @@ class Fixturize
 
       name = name.to_s
       self.current_instrumentation = name
-      instrumentations = saved_contexts_collection.find({ :name => name }).to_a
+      db_instrumentations = saved_contexts_collection.find({ :name => name }).to_a
+      ivar_instrumentations = saved_ivars_collection.find({ :name => name }).to_a
 
-      if instrumentations.any?
+      if db_instrumentations.any? || ivar_instrumentations.any?
         uninstall!
 
-        instrumentations.each do |instrumentation|
-          collection = database.collection(instrumentation['collection_name'])
-          collection.send(instrumentation['method_name'], *YAML.load(instrumentation['args']))
+        db_instrumentations.each do |instrumentation|
+          load_data_from(instrumentation)
+        end
+
+        ivar_instrumentations.each do |instrumentation|
+          load_ivars_from(instrumentation, caller_of_block(block))
         end
       else
-        begin
-          install!
-          yield
-        ensure
-          self.current_instrumentation = nil
-          uninstall!
-        end
+        safe_install(&block)
       end
     end
 
   private
 
-    def install!
+    def caller_of_block(block)
+      block.binding.eval("self")
+    end
+
+    def safe_install(&block)
+      install!(&block)
+    ensure
+      self.current_instrumentation = nil
+      uninstall!
+    end
+
+    def install!(&block)
       METHODS_FOR_INSTRUMENTATION.each do |method_name|
         Mongo::Collection.class_eval <<-HERE, __FILE__, __LINE__
           unless instance_methods.include?(:#{method_name}_aliased_from_mongo_saved_context)
             alias_method :#{method_name}_aliased_from_mongo_saved_context, :#{method_name}
 
             def #{method_name}(*args, &block)
-              Fixturize.instrument(@name, :#{method_name}, *args, &block)
+              Fixturize.instrument_database(@name, :#{method_name}, *args, &block)
               #{method_name}_aliased_from_mongo_saved_context(*args, &block)
             end
           end
         HERE
+      end
+
+      block_caller = caller_of_block(block)
+      ivars_before_block = block_caller.instance_variables
+
+      yield.tap do
+        new_ivars = (Set.new(block_caller.instance_variables) - Set.new(ivars_before_block)).to_a
+        instrument_ivars(new_ivars, block_caller)
       end
     end
 

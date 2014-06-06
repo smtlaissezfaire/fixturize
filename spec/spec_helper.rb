@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'rspec'
 require 'mongo_mapper'
+require 'ruby-debug'
 
 MongoMapper.connection = Mongo::Connection.new('localhost')
 MongoMapper.database = "fixturize"
