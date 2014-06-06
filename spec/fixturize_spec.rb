@@ -124,10 +124,10 @@ describe Fixturize do
   end
 
   it "should use the version number in the database table name" do
-    Fixturize.collection_name.should == "mongo_saved_contexts_0_"
+    Fixturize.db_updates_collection_name.should == "mongo_saved_contexts_0_"
 
     Fixturize.database_version = 99
-    Fixturize.collection_name.should == "mongo_saved_contexts_99_"
+    Fixturize.db_updates_collection_name.should == "mongo_saved_contexts_99_"
   end
 
   it "should have a list of all the collections it uses" do

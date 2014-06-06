@@ -25,11 +25,19 @@ class Fixturize
     end
 
     def collections
-      [collection_name]
+      [db_updates_collection_name]
     end
 
-    def collection_name
+    def db_updates_collection_name
       "mongo_saved_contexts_#{database_version}_"
+    end
+
+    def saved_contexts_collection
+      if database
+        database.collection(db_updates_collection_name)
+      else
+        raise "Fixturize is not yet setup!  Make sure the database is set!"
+      end
     end
 
     def clear_cache!
@@ -47,14 +55,6 @@ class Fixturize
         :method_name => method_name.to_s,
         :args => YAML.dump(args)
       })
-    end
-
-    def saved_contexts_collection
-      if database
-        database.collection(collection_name)
-      else
-        raise "Fixturize is not yet setup!  Make sure the database is set!"
-      end
     end
 
     def refresh!(name = nil)
