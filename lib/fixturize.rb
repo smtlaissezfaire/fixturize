@@ -66,7 +66,7 @@ class Fixturize
 
         # TODO: Use duck typing?
         if defined?(MongoMapper) && obj.kind_of?(MongoMapper::Document)
-          collection.insert({
+          collection.insert_aliased_from_fixturize({
             :type => INSTRUMENT_IVARS,
             :name => current_instrumentation,
             :ivar => ivar,

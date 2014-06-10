@@ -121,6 +121,21 @@ describe Fixturize do
     expect(@users.find().to_a[0]["last_name"]).to eq("Baylor")
   end
 
+  it "should not insert into the fixturized collection when reloading a block" do
+    fixturize "one" do
+      @users.insert(:first_name => "Scott")
+    end
+
+    old_count = Fixturize.collection.count
+
+    fixturize "one" do
+      @users.insert(:first_name => "Scott")
+    end
+
+    new_count = Fixturize.collection.count
+    expect(new_count).to eq(old_count)
+  end
+
   it "should be at version 0 by default" do
     expect(Fixturize.database_version).to eq(0)
   end
@@ -192,5 +207,22 @@ describe Fixturize do
       expect(@beethoven.first_name).to eq("Ludwig")
     end
 
+    it "should use the raw insert when inserting ivars" do
+      fixturize "should use raw insert" do
+        @user = User.create(:first_name => "Andrew 1")
+      end
+
+      old_count = Fixturize.collection.count
+
+      @user.destroy
+
+      fixturize "should use raw insert" do
+        @user = User.create(:first_name => "Andrew")
+      end
+
+      new_count = Fixturize.collection.count
+
+      expect(new_count).to eq(old_count)
+    end
   end
 end
