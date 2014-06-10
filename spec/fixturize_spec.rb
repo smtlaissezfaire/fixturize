@@ -11,7 +11,7 @@ describe Fixturize do
   before do
     @db = MongoMapper.database
 
-    @users = @db.collection('users_for_mongo_saved_contexts')
+    @users = @db.collection('users_for_fixturize')
 
     Fixturize.database = @db
     Fixturize.refresh!
@@ -131,10 +131,10 @@ describe Fixturize do
   end
 
   it "should use the version number in the database table name" do
-    expect(Fixturize.collection_name).to eq("mongo_saved_contexts_0_")
+    expect(Fixturize.collection_name).to eq("fixturize_0_")
 
     Fixturize.database_version = 99
-    expect(Fixturize.collection_name).to eq("mongo_saved_contexts_99_")
+    expect(Fixturize.collection_name).to eq("fixturize_99_")
   end
 
   describe "with ivars" do

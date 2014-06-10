@@ -31,7 +31,7 @@ class Fixturize
     end
 
     def collection_name
-      "mongo_saved_contexts_#{database_version}_"
+      "fixturize_#{database_version}_"
     end
 
     def collection
@@ -44,14 +44,14 @@ class Fixturize
 
     def clear_cache!
       database.collections.each do |c|
-        if c.name == /mongo_saved_/
+        if c.name == /fixturize_/
           c.drop
         end
       end
     end
 
     def instrument_database(collection_name, method_name, *args)
-      collection.insert_aliased_from_mongo_saved_context({
+      collection.insert_aliased_from_fixturize({
         :type => INSTRUMENT_DATABASE,
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
@@ -146,12 +146,12 @@ class Fixturize
     def install!(&block)
       METHODS_FOR_INSTRUMENTATION.each do |method_name|
         Mongo::Collection.class_eval <<-HERE, __FILE__, __LINE__
-          unless instance_methods.include?(:#{method_name}_aliased_from_mongo_saved_context)
-            alias_method :#{method_name}_aliased_from_mongo_saved_context, :#{method_name}
+          unless instance_methods.include?(:#{method_name}_aliased_from_fixturize)
+            alias_method :#{method_name}_aliased_from_fixturize, :#{method_name}
 
             def #{method_name}(*args, &block)
               Fixturize.instrument_database(@name, :#{method_name}, *args, &block)
-              #{method_name}_aliased_from_mongo_saved_context(*args, &block)
+              #{method_name}_aliased_from_fixturize(*args, &block)
             end
           end
         HERE
@@ -169,9 +169,9 @@ class Fixturize
     def uninstall!
       METHODS_FOR_INSTRUMENTATION.each do |method_name|
         Mongo::Collection.class_eval <<-HERE, __FILE__, __LINE__
-          if instance_methods.include?(:#{method_name}_aliased_from_mongo_saved_context)
-            alias_method :#{method_name}, :#{method_name}_aliased_from_mongo_saved_context
-            remove_method :#{method_name}_aliased_from_mongo_saved_context
+          if instance_methods.include?(:#{method_name}_aliased_from_fixturize)
+            alias_method :#{method_name}, :#{method_name}_aliased_from_fixturize
+            remove_method :#{method_name}_aliased_from_fixturize
           end
         HERE
       end
