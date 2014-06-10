@@ -34,6 +34,8 @@ Gemfile:
 spec_helper.rb:
 
    Fixturize.version = 1 # bump this if you change the source of a block
+   Fixturize.database = MongoMapper.database
+   Fixturize.enabled = true
 
    # (only if you wipe your db between test runs):
    RSpec.configure do |config|

@@ -3,6 +3,8 @@ require 'spec_helper'
 class User
   include MongoMapper::Document
 
+  set_collection_name 'users_for_fixturize'
+
   key :first_name, String
   key :last_name, String
 end
@@ -223,6 +225,54 @@ describe Fixturize do
       new_count = Fixturize.collection.count
 
       expect(new_count).to eq(old_count)
+    end
+  end
+
+  describe "when enabled" do
+    before :each do
+      Fixturize.enabled = true
+    end
+
+    it "should not run the block a second time" do
+      fixturize "with enabled = false" do
+        @users.insert(:first_name => "Scott")
+      end
+
+      expect(@users.count).to eq(1)
+
+      @users.remove()
+      block_run = false
+
+      fixturize "with enabled = false" do
+        block_run = true
+        @users.insert(:first_name => "Scott")
+      end
+      expect(block_run).to eq(false)
+      expect(@users.count).to eq(1)
+    end
+  end
+
+  describe "when not enabled" do
+    before :each do
+      Fixturize.enabled = false
+    end
+
+    it "should always run a block" do
+      fixturize "with enabled = false" do
+        @users.insert(:first_name => "Scott")
+      end
+
+      expect(@users.count).to eq(1)
+
+      @users.remove()
+      block_run = false
+
+      fixturize "with enabled = false" do
+        block_run = true
+        @users.insert(:first_name => "Scott")
+      end
+      expect(block_run).to eq(true)
+      expect(@users.count).to eq(1)
     end
   end
 end

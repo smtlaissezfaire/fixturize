@@ -20,7 +20,12 @@ class Fixturize
   class << self
     attr_accessor :database
     attr_accessor :current_instrumentation
+    attr_accessor :enabled
     attr_writer :database_version
+
+    def enabled?
+      enabled ? true : false
+    end
 
     def database_version
       @database_version ||= 0
@@ -50,7 +55,50 @@ class Fixturize
       end
     end
 
-    def instrument_database(collection_name, method_name, *args)
+    def refresh!(name = nil)
+      if name
+        collection.remove({ :name => name.to_s })
+      else
+        collection.drop()
+      end
+    end
+
+    def fixturize(name = nil, &block)
+      return yield if !enabled?
+
+      if !name && block.respond_to?(:source_location)
+        # is this portable?
+        name = block.source_location.join(":")
+      end
+
+      if !name
+        raise "A name must be given to fixturize"
+      end
+
+      name = name.to_s
+      self.current_instrumentation = name
+      db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
+
+      if db_instrumentations.any?
+        uninstall!
+
+        db_instrumentations.each do |instrumentation|
+          load_data_from(instrumentation)
+        end
+
+        ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
+
+        if ivar_instrumentations.any?
+          ivar_instrumentations.each do |instrumentation|
+            load_ivars_from(instrumentation, caller_of_block(block))
+          end
+        end
+      else
+        safe_install(&block)
+      end
+    end
+
+    def _instrument_database(collection_name, method_name, *args)
       collection.insert_aliased_from_fixturize({
         :type => INSTRUMENT_DATABASE,
         :name => current_instrumentation,
@@ -59,6 +107,8 @@ class Fixturize
         :args => YAML.dump(args)
       })
     end
+
+  private
 
     def instrument_ivars(ivars, context)
       ivars.each do |ivar|
@@ -92,49 +142,6 @@ class Fixturize
       target_obj.instance_variable_set(ivar, obj)
     end
 
-    def refresh!(name = nil)
-      if name
-        collection.remove({ :name => name.to_s })
-      else
-        collection.drop()
-      end
-    end
-
-    def fixturize(name = nil, &block)
-      if !name && block.respond_to?(:source_location)
-        # is this portable?
-        name = block.source_location.join(":")
-      end
-
-      if !name
-        raise "A name must be given to fixturize"
-      end
-
-      name = name.to_s
-      self.current_instrumentation = name
-      db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
-
-      if db_instrumentations.any?
-        uninstall!
-
-        db_instrumentations.each do |instrumentation|
-          load_data_from(instrumentation)
-        end
-
-        ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
-
-        if ivar_instrumentations.any?
-          ivar_instrumentations.each do |instrumentation|
-            load_ivars_from(instrumentation, caller_of_block(block))
-          end
-        end
-      else
-        safe_install(&block)
-      end
-    end
-
-  private
-
     def caller_of_block(block)
       block.binding.eval("self")
     end
@@ -153,7 +160,7 @@ class Fixturize
             alias_method :#{method_name}_aliased_from_fixturize, :#{method_name}
 
             def #{method_name}(*args, &block)
-              Fixturize.instrument_database(@name, :#{method_name}, *args, &block)
+              Fixturize._instrument_database(@name, :#{method_name}, *args, &block)
               #{method_name}_aliased_from_fixturize(*args, &block)
             end
           end
