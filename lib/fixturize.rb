@@ -12,6 +12,11 @@ class Fixturize
     :rename,
   ]
 
+  INSERT_TYPES = [
+    INSTRUMENT_DATABASE = "instrument_database",
+    INSTRUMENT_IVARS = "instrument_ivar"
+  ]
+
   class << self
     attr_accessor :database
     attr_accessor :current_instrumentation
@@ -25,35 +30,16 @@ class Fixturize
       @database_version = nil
     end
 
-    def collections
-      [
-        db_updates_collection_name,
-        db_saved_ivars_collection_name,
-      ]
-    end
-
-    def db_updates_collection_name
+    def collection_name
       "mongo_saved_contexts_#{database_version}_"
     end
 
-    def db_saved_ivars_collection_name
-      "mongo_saved_ivars_#{database_version}_"
-    end
-
-    def saved_contexts_collection
+    def collection
       if !database
         raise "Fixturize is not yet setup!  Make sure the database is set!"
       end
 
-      database.collection(db_updates_collection_name)
-    end
-
-    def saved_ivars_collection
-      if !database
-        raise "Fixturize is not yet setup!  Make sure the database is set!"
-      end
-
-      database.collection(db_saved_ivars_collection_name)
+      database.collection(collection_name)
     end
 
     def clear_cache!
@@ -65,7 +51,8 @@ class Fixturize
     end
 
     def instrument_database(collection_name, method_name, *args)
-      saved_contexts_collection.insert_aliased_from_mongo_saved_context({
+      collection.insert_aliased_from_mongo_saved_context({
+        :type => INSTRUMENT_DATABASE,
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
@@ -79,7 +66,8 @@ class Fixturize
 
         # TODO: Use duck typing?
         if defined?(MongoMapper) && obj.kind_of?(MongoMapper::Document)
-          saved_ivars_collection.insert({
+          collection.insert({
+            :type => INSTRUMENT_IVARS,
             :name => current_instrumentation,
             :ivar => ivar,
             :model => obj.class.to_s,
@@ -106,9 +94,9 @@ class Fixturize
 
     def refresh!(name = nil)
       if name
-        saved_contexts_collection.remove({ :name => name.to_s })
+        collection.remove({ :name => name.to_s })
       else
-        saved_contexts_collection.drop()
+        collection.drop()
       end
     end
 
@@ -124,8 +112,8 @@ class Fixturize
 
       name = name.to_s
       self.current_instrumentation = name
-      db_instrumentations = saved_contexts_collection.find({ :name => name }).to_a
-      ivar_instrumentations = saved_ivars_collection.find({ :name => name }).to_a
+      db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
+      ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
 
       if db_instrumentations.any? || ivar_instrumentations.any?
         uninstall!

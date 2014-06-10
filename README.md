@@ -37,18 +37,18 @@ spec_helper.rb:
 
    # (only if you wipe your db between test runs):
    RSpec.configure do |config|
-      def wipe_db
-        MongoMapper.database.collections.each do |c|
-          unless (c.name =~ /system/ || Fixturize.collections.include?(c.name))
-            c.remove()
-          end
-        end
-      end
+     def wipe_db
+       MongoMapper.database.collections.each do |c|
+         unless (c.name =~ /system/ || Fixturize.collection == c.name)
+           c.remove()
+         end
+       end
+     end
 
-      config.before(:each) do
-        wipe_db
-      end
-    end
+     config.before(:each) do
+       wipe_db
+     end
+   end
 
 ## FAQ
 

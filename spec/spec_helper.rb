@@ -19,7 +19,7 @@ RSpec.configure do |config|
 
   def wipe_db
     MongoMapper.database.collections.each do |c|
-      unless (c.name =~ /system/ || Fixturize.collections.include?(c.name))
+      unless (c.name =~ /system/ || Fixturize.collection == c.name)
         c.drop()
       end
     end

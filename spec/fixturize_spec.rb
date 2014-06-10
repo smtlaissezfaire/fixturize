@@ -131,14 +131,10 @@ describe Fixturize do
   end
 
   it "should use the version number in the database table name" do
-    expect(Fixturize.db_updates_collection_name).to eq("mongo_saved_contexts_0_")
+    expect(Fixturize.collection_name).to eq("mongo_saved_contexts_0_")
 
     Fixturize.database_version = 99
-    expect(Fixturize.db_updates_collection_name).to eq("mongo_saved_contexts_99_")
-  end
-
-  it "should have a list of all the collections it uses" do
-    expect(Fixturize.collections).to eq(["mongo_saved_contexts_0_", "mongo_saved_ivars_0_"])
+    expect(Fixturize.collection_name).to eq("mongo_saved_contexts_99_")
   end
 
   describe "with ivars" do
