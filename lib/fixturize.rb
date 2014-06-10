@@ -113,17 +113,20 @@ class Fixturize
       name = name.to_s
       self.current_instrumentation = name
       db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
-      ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
 
-      if db_instrumentations.any? || ivar_instrumentations.any?
+      if db_instrumentations.any?
         uninstall!
 
         db_instrumentations.each do |instrumentation|
           load_data_from(instrumentation)
         end
 
-        ivar_instrumentations.each do |instrumentation|
-          load_ivars_from(instrumentation, caller_of_block(block))
+        ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
+
+        if ivar_instrumentations.any?
+          ivar_instrumentations.each do |instrumentation|
+            load_ivars_from(instrumentation, caller_of_block(block))
+          end
         end
       else
         safe_install(&block)
