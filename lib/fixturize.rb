@@ -49,7 +49,15 @@ class Fixturize
 
     def clear_cache!
       database.collections.each do |c|
-        if c.name == /fixturize_/
+        if c.name =~ /fixturize_/
+          c.drop
+        end
+      end
+    end
+
+    def clear_old_versions!
+      database.collections.each do |c|
+        if c.name =~ /fixturize_/ && c.name != self.collection_name
           c.drop
         end
       end

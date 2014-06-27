@@ -26,6 +26,7 @@ RSpec.configure do |config|
   end
 
   config.before(:each) do
+    Fixturize.database_version = 1
     Fixturize.enabled = true
     wipe_db
   end

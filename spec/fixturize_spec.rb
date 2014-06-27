@@ -275,4 +275,48 @@ describe Fixturize do
       expect(@users.count).to eq(1)
     end
   end
+
+  describe "clearing the cache" do
+    it "should drop data from the current version" do
+      Fixturize.database_version = 1
+
+      fixturize do
+        @users.insert(:first_name => "Scott")
+      end
+
+      expect(Fixturize.collection.count).to eq(1)
+      Fixturize.clear_cache!
+      expect(Fixturize.collection.count).to eq(0)
+    end
+  end
+
+  describe "dropping old versions" do
+    it "should not drop data from the current version" do
+      Fixturize.database_version = 1
+
+      fixturize do
+        @users.insert(:first_name => "Scott")
+      end
+
+      expect(Fixturize.collection.count).to eq(1)
+      Fixturize.clear_old_versions!
+      expect(Fixturize.collection.count).to eq(1)
+    end
+
+    it "should drop data from an old version" do
+      Fixturize.database_version = 1
+
+      fixturize do
+        @users.insert(:first_name => "Scott")
+      end
+
+      expect(Fixturize.collection.count).to eq(1)
+
+      Fixturize.database_version = 2
+      Fixturize.clear_old_versions!
+      Fixturize.database_version = 1
+
+      expect(Fixturize.collection.count).to eq(0)
+    end
+  end
 end
