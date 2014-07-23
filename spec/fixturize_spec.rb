@@ -325,4 +325,34 @@ describe Fixturize do
       expect(Fixturize.collection.count).to eq(0)
     end
   end
+
+  describe "when an ivar gets changed" do
+    before :each do
+      @user = User.create
+
+      fixturize "update user name" do
+        @user.first_name = "Andrew"
+        @user.save!
+      end
+    end
+
+    it "should be reloaded when modified" do
+      @user.first_name = nil
+
+      fixturize "update user name" do
+        @user.first_name = "Andrew"
+        @user.save!
+      end
+
+      expect(@user.first_name).to eq("Andrew")
+    end
+
+    it "should not reload if the ivar is not used" do
+      @user.first_name = nil
+
+      fixturize "without using user" do; end
+
+      expect(@user.first_name).to eq(nil)
+    end
+  end
 end

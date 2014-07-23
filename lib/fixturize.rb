@@ -180,8 +180,7 @@ class Fixturize
       ivars_before_block = block_caller.instance_variables
 
       yield.tap do
-        new_ivars = (Set.new(block_caller.instance_variables) - Set.new(ivars_before_block)).to_a
-        instrument_ivars(new_ivars, block_caller)
+        instrument_ivars(block_caller.instance_variables, block_caller)
       end
     end
 
