@@ -72,6 +72,7 @@ class Fixturize
     end
 
     def fixturize(name = nil, &block)
+      raise LocalJumpError.new("fixturize requires a block") unless block_given?
       return yield if !enabled?
 
       if !name && block.respond_to?(:source_location)

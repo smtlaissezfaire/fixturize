@@ -27,6 +27,12 @@ describe Fixturize do
     }.to_not raise_error
   end
 
+  it "should raise an error if no block is given" do
+    expect {
+      fixturize "some name"
+    }.to raise_error(LocalJumpError)
+  end
+
   it "should be able to fixturize some data" do
     fixturize "insert users" do
       @users.insert({ :first_name => "Scott" })
@@ -76,7 +82,7 @@ describe Fixturize do
     @users.drop()
 
     @users.insert({ :first_name => "Scott" })
-    fixturize "change name"
+    fixturize "change name" do; end
 
     expect(@users.find().to_a[0]['last_name']).to eq("Taylor")
   end
@@ -114,7 +120,7 @@ describe Fixturize do
 
     Fixturize.refresh!("update user")
 
-    fixturize "insert user"
+    fixturize "insert user" do; end
     fixturize "update user" do
       @users.update({ :first_name => "Scott" }, { :last_name => "Baylor" })
     end
