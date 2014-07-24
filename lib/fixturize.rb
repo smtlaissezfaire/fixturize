@@ -177,7 +177,6 @@ class Fixturize
       end
 
       block_caller = caller_of_block(block)
-      ivars_before_block = block_caller.instance_variables
 
       yield.tap do
         instrument_ivars(block_caller.instance_variables, block_caller)
