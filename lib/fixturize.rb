@@ -113,7 +113,7 @@ class Fixturize
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
-        :args => YAML.dump(args)
+        :args => BSON::Binary.new(Marshal.dump(args))
       })
     end
 
@@ -138,7 +138,7 @@ class Fixturize
 
     def load_data_from(instrumentation)
       collection = database.collection(instrumentation['collection_name'])
-      collection.send(instrumentation['method_name'], *YAML.load(instrumentation['args']))
+      collection.send(instrumentation['method_name'], *Marshal.load(instrumentation['args'].to_s))
     end
 
     def load_ivars_from(instrumentation, target_obj)
