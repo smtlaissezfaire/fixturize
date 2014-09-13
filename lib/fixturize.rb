@@ -23,6 +23,13 @@ class Fixturize
     attr_accessor :enabled
     attr_writer :database_version
 
+    def instrumentation_cache
+      @instrumentation_cache ||= {
+        INSTRUMENT_DATABASE.to_sym => {},
+        INSTRUMENT_IVARS.to_sym => {}
+      }
+    end
+
     def enabled?
       enabled ? true : false
     end
@@ -86,7 +93,7 @@ class Fixturize
 
       name = name.to_s
       self.current_instrumentation = name
-      db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
+      db_instrumentations = find_instrumentation(name, INSTRUMENT_DATABASE)
 
       if db_instrumentations.any?
         uninstall!
@@ -95,7 +102,7 @@ class Fixturize
           load_data_from(instrumentation)
         end
 
-        ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
+        ivar_instrumentations = find_instrumentation(name, INSTRUMENT_IVARS)
 
         if ivar_instrumentations.any?
           ivar_instrumentations.each do |instrumentation|
@@ -105,6 +112,16 @@ class Fixturize
       else
         safe_install(&block)
       end
+    end
+
+    def find_instrumentation(name, type)
+      if (cache = instrumentation_cache[type.to_sym][name.to_sym])
+        return cache
+      end
+
+      records = collection.find({ :name => name, :type => type }).to_a
+      instrumentation_cache[type.to_sym][name.to_sym] = records
+      records
     end
 
     def _instrument_database(collection_name, method_name, *args)
