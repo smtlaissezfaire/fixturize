@@ -2,7 +2,7 @@ require 'date'
 
 Gem::Specification.new do |s|
   s.name        = 'fixturize'
-  s.version     = '0.1.7'
+  s.version     = '0.1.8'
   s.date        = Date.today.to_s
   s.summary     = "fixturize your mongo tests inline"
   s.description = "fixturize your mongo(mapper) tests inline by caching blocks of created objects"
