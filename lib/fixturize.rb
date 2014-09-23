@@ -178,9 +178,9 @@ class Fixturize
 
       block_caller = caller_of_block(block)
 
-      yield.tap do
-        instrument_ivars(block_caller.instance_variables, block_caller)
-      end
+      ret_val = yield
+      instrument_ivars(block_caller.instance_variables, block_caller)
+      ret_val
     end
 
     def uninstall!
