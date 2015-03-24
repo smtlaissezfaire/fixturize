@@ -56,10 +56,10 @@ class Fixturize
     end
 
     def clear_old_versions!
-      database.collections.each do |c|
-        if c.name =~ /fixturize_/ && c.name != self.collection_name
-          c.drop
-        end
+      database.collections.select do |c|
+        c.name =~ /fixturize_/ && c.name != self.collection_name
+      end.each do |c|
+        c.drop
       end
     end
 
