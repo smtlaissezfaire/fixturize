@@ -22,6 +22,7 @@ class Fixturize
     attr_accessor :current_instrumentation
     attr_accessor :enabled
     attr_writer :database_version
+    attr_accessor :relative_path_root
 
     def enabled?
       enabled ? true : false
@@ -71,20 +72,31 @@ class Fixturize
       end
     end
 
-    def fixturize(name = nil, &block)
-      raise LocalJumpError.new("fixturize requires a block") unless block_given?
-      return yield if !enabled?
-
+    def fixture_name(name = nil, &block)
       if !name && block.respond_to?(:source_location)
         # is this portable?
-        name = block.source_location.join(":")
+        file_name, line_number = block.source_location
+
+        if relative_path_root && file_name.start_with?(relative_path_root)
+          file_name = file_name[relative_path_root.length + 1 .. -1]
+        end
+
+        name = [file_name, line_number].join(":")
       end
 
       if !name
         raise "A name must be given to fixturize"
       end
 
-      name = name.to_s
+      name.to_s
+    end
+
+    def fixturize(name = nil, &block)
+      raise LocalJumpError.new("fixturize requires a block") unless block_given?
+      return yield if !enabled?
+
+      name = fixture_name(name, &block)
+
       self.current_instrumentation = name
       db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
 

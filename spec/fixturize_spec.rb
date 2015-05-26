@@ -18,6 +18,7 @@ describe Fixturize do
     Fixturize.database = @db
     Fixturize.refresh!
     Fixturize.reset_version!
+    Fixturize.relative_path_root = nil
   end
 
   it "should be able to take a block (and do nothing)" do
@@ -353,6 +354,31 @@ describe Fixturize do
       fixturize "without using user" do; end
 
       expect(@user.first_name).to eq(nil)
+    end
+  end
+
+  describe "naming the fixturize block" do
+    it "should use the name if the name is provided" do
+      expect(Fixturize.fixture_name("foo")).to eq("foo")
+    end
+
+    it "should use the name if the name is provided (even if a block is provided)" do
+      block = lambda {}
+      expect(Fixturize.fixture_name("foo", &block)).to eq("foo")
+    end
+
+    it "should use the block location by default" do
+      block = lambda {}
+      expect(Fixturize.fixture_name(nil, &block)).to eq(__FILE__ + ":" + (__LINE__ - 1).to_s)
+    end
+
+    it "should use a relative name path if defined" do
+      this_file_dir = File.dirname(__FILE__)
+      this_file_base_name = File.basename(__FILE__)
+
+      Fixturize.relative_path_root = this_file_dir
+      block = lambda {}
+      expect(Fixturize.fixture_name(nil, &block)).to eq(this_file_base_name + ":" + (__LINE__ - 1).to_s)
     end
   end
 end
