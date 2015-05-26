@@ -57,6 +57,8 @@ class Fixturize
     end
 
     def clear_old_versions!
+      return unless enabled?
+
       database.collections.select do |c|
         c.name =~ /fixturize_/ && c.name != self.collection_name
       end.each do |c|
@@ -65,11 +67,19 @@ class Fixturize
     end
 
     def refresh!(name = nil)
+      return unless enabled?
+
       if name
         collection.remove({ :name => name.to_s })
       else
         collection.drop()
       end
+    end
+
+    def index!
+      return unless enabled?
+
+      collection.ensure_index({ :name => Mongo::ASCENDING, :type => Mongo::ASCENDING })
     end
 
     def fixture_name(name = nil, &block)

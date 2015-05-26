@@ -381,4 +381,12 @@ describe Fixturize do
       expect(Fixturize.fixture_name(nil, &block)).to eq(this_file_base_name + ":" + (__LINE__ - 1).to_s)
     end
   end
+
+  describe "index!" do
+    it "should not die" do
+      expect {
+        Fixturize.index!
+      }.not_to raise_error
+    end
+  end
 end
