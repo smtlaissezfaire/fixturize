@@ -161,6 +161,18 @@ describe Fixturize do
     expect(Fixturize.collection_name).to eq("fixturize_99_")
   end
 
+  it "should not save data in a block that raises" do
+    expect {
+      begin
+        fixturize do
+          @users.insert(:first_name => "Scott")
+          raise "got here"
+        end
+      rescue => e
+      end
+    }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
+  end
+
   describe "with ivars" do
     it "should have access to ivars" do
       fixturize do
@@ -232,6 +244,27 @@ describe Fixturize do
       new_count = Fixturize.collection.count
 
       expect(new_count).to eq(old_count)
+    end
+
+    it "should not save ivars that are assigned inside the fixturize block if it raises" do
+      expect {
+        begin
+          fixturize do
+            @user = User.create(:first_name => "Andrew")
+            raise "testing error"
+          end
+        rescue => e
+        end
+      }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
+    end
+
+    it "should raise the error of the fixturize block" do
+      expect {
+        fixturize do
+          @user = User.create(:first_name => "Andrew")
+          raise "testing error"
+        end
+      }.to raise_error("testing error")
     end
   end
 

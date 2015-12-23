@@ -200,7 +200,16 @@ class Fixturize
 
       block_caller = caller_of_block(block)
 
-      ret_val = yield
+      begin
+        ret_val = yield
+      rescue => e
+        collection.remove_aliased_from_fixturize({
+          :name => current_instrumentation,
+        })
+
+        raise e
+      end
+
       instrument_ivars(block_caller.instance_variables, block_caller)
       ret_val
     end
