@@ -1,6 +1,8 @@
 require 'mongo'
 require 'yaml'
 require 'set'
+require 'method_source'
+require 'digest/sha1'
 
 class Fixturize
   METHODS_FOR_INSTRUMENTATION = [
@@ -70,7 +72,8 @@ class Fixturize
       return unless enabled?
 
       if name
-        collection.remove({ :name => name.to_s })
+        name = fixture_name(name)
+        collection.remove({ :name => name })
       else
         collection.drop()
       end
@@ -92,6 +95,10 @@ class Fixturize
         end
 
         name = [file_name, line_number].join(":")
+
+        if block.respond_to?(:source)
+          name += ":" + Digest::SHA1.hexdigest(block.source.strip)
+        end
       end
 
       if !name

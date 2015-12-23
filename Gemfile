@@ -3,6 +3,7 @@ source 'http://rubygems.org'
 ruby '2.2.2'
 
 gem 'mongo'
+gem 'method_source'
 
 group :test do
   gem 'bson_ext'

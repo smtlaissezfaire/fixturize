@@ -395,6 +395,10 @@ describe Fixturize do
       Fixturize.fixture_name(*args, &block)
     end
 
+    def sha1(str)
+      Digest::SHA1.hexdigest(str)
+    end
+
     it "should use the name if the name is provided" do
       expect(fixture_name("foo")).to eq("foo")
     end
@@ -404,9 +408,9 @@ describe Fixturize do
       expect(fixture_name("foo", &block)).to eq("foo")
     end
 
-    it "should use the block location by default" do
+    it "should use the block location by default (along with the block source)" do
       block = lambda {}
-      expected_name = __FILE__ + ":" + (__LINE__ - 1).to_s
+      expected_name = "#{__FILE__}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
 
       expect(fixture_name(nil, &block)).to eq(expected_name)
     end
@@ -417,7 +421,7 @@ describe Fixturize do
 
       Fixturize.relative_path_root = this_file_dir
       block = lambda {}
-      expected_name = this_file_base_name + ":" + (__LINE__ - 1).to_s
+      expected_name = "#{this_file_base_name}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
 
       expect(fixture_name(nil, &block)).to eq(expected_name)
     end
