@@ -391,18 +391,22 @@ describe Fixturize do
   end
 
   describe "naming the fixturize block" do
+    def fixture_name(*args, &block)
+      Fixturize.fixture_name(*args, &block)
+    end
+
     it "should use the name if the name is provided" do
-      expect(Fixturize.fixture_name("foo")).to eq("foo")
+      expect(fixture_name("foo")).to eq("foo")
     end
 
     it "should use the name if the name is provided (even if a block is provided)" do
       block = lambda {}
-      expect(Fixturize.fixture_name("foo", &block)).to eq("foo")
+      expect(fixture_name("foo", &block)).to eq("foo")
     end
 
     it "should use the block location by default" do
       block = lambda {}
-      expect(Fixturize.fixture_name(nil, &block)).to eq(__FILE__ + ":" + (__LINE__ - 1).to_s)
+      expect(fixture_name(nil, &block)).to eq(__FILE__ + ":" + (__LINE__ - 1).to_s)
     end
 
     it "should use a relative name path if defined" do
@@ -411,7 +415,8 @@ describe Fixturize do
 
       Fixturize.relative_path_root = this_file_dir
       block = lambda {}
-      expect(Fixturize.fixture_name(nil, &block)).to eq(this_file_base_name + ":" + (__LINE__ - 1).to_s)
+      expected_name = this_file_base_name + ":" + (__LINE__ - 1).to_s
+      expect(fixture_name(nil, &block)).to eq(expected_name)
     end
   end
 
