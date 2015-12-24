@@ -113,8 +113,8 @@ class Fixturize
       return yield if !enabled?
 
       name = fixture_name(name, &block)
-
       self.current_instrumentation = name
+
       db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
 
       if db_instrumentations.any?
@@ -142,7 +142,8 @@ class Fixturize
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
-        :args => BSON::Binary.new(Marshal.dump(args))
+        :args => BSON::Binary.new(Marshal.dump(args)),
+        # :json_args => args.to_json,
       })
     end
 
