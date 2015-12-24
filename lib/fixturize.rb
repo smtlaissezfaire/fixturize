@@ -82,7 +82,7 @@ class Fixturize
     def index!
       return unless enabled?
 
-      collection.ensure_index({ :name => Mongo::ASCENDING, :type => Mongo::ASCENDING })
+      collection.ensure_index({ :name => Mongo::ASCENDING, :type => Mongo::ASCENDING, :timestamp => Mongo::ASCENDING })
     end
 
     def fixture_name(name = nil, &block)
@@ -115,7 +115,10 @@ class Fixturize
       name = fixture_name(name, &block)
       self.current_instrumentation = name
 
-      db_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_DATABASE }).to_a
+      db_instrumentations = collection.
+        find({ :name => name, :type => INSTRUMENT_DATABASE }).
+        sort({ :timestamp => Mongo::ASCENDING }).
+        to_a
 
       if db_instrumentations.any?
         uninstall!
@@ -124,7 +127,10 @@ class Fixturize
           load_data_from(instrumentation)
         end
 
-        ivar_instrumentations = collection.find({ :name => name, :type => INSTRUMENT_IVARS }).to_a
+        ivar_instrumentations = collection.
+          find({ :name => name, :type => INSTRUMENT_IVARS }).
+          sort({ :timestamp => Mongo::ASCENDING }).
+          to_a
 
         if ivar_instrumentations.any?
           ivar_instrumentations.each do |instrumentation|
@@ -143,6 +149,7 @@ class Fixturize
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
         :args => BSON::Binary.new(Marshal.dump(args)),
+        :timestamp => Time.now.to_f
         # :json_args => args.to_json,
       })
     end
@@ -160,7 +167,8 @@ class Fixturize
             :name => current_instrumentation,
             :ivar => ivar,
             :model => obj.class.to_s,
-            :id => obj.id
+            :id => obj.id,
+            :timestamp => Time.now.to_f
           })
         end
       end

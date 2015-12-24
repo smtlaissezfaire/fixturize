@@ -60,6 +60,7 @@ DEPENDENCIES
   mongo_mapper
   rspec
   rspec-autotest
+  rspec-mocks
 
 BUNDLED WITH
    1.10.5

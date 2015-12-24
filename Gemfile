@@ -11,5 +11,6 @@ group :test do
   gem 'byebug'
 
   gem 'rspec'
+  gem 'rspec-mocks'
   gem 'rspec-autotest'
 end

@@ -173,6 +173,21 @@ describe Fixturize do
     }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
   end
 
+  it "should perform operations in order" do
+    block = lambda {}
+
+    fixturize "in order", &block
+
+    mock_finder = double('finder', :to_a => []).as_null_object
+    allow(Fixturize).to receive(:collection).and_return mock_finder
+
+    expect(mock_finder).to receive(:find)
+    expect(mock_finder).to receive(:sort).with({ :timestamp => 1 }).and_return mock_finder
+    expect(mock_finder).to receive(:to_a)
+
+    fixturize "in order", &block
+  end
+
   describe "with ivars" do
     it "should have access to ivars" do
       fixturize do
