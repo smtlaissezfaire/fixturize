@@ -266,6 +266,23 @@ describe Fixturize do
         end
       }.to raise_error("testing error")
     end
+
+    it "should restore data set in the block but not saved to the database" do
+      block = lambda {
+        @user = User.create!(:first_name => "Andrew")
+        @user.first_name = "Scott"
+      }
+
+      fixturize "restoring data", &block
+
+      expect(@user.first_name).to eq("Scott")
+
+      @user.destroy
+      @user = nil
+      fixturize "restoring data", &block
+
+      expect(@user.first_name).to eq("Scott")
+    end
   end
 
   describe "when enabled" do

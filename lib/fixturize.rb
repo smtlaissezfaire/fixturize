@@ -151,8 +151,9 @@ class Fixturize
             :type => INSTRUMENT_IVARS,
             :name => current_instrumentation,
             :ivar => ivar,
-            :model => obj.class.to_s,
-            :id => obj.id
+            :data => YAML.dump(obj)
+            # :model => obj.class.to_s,
+            # :id => obj.id
           })
         end
       end
@@ -165,11 +166,13 @@ class Fixturize
 
     def load_ivars_from(instrumentation, target_obj)
       ivar = instrumentation['ivar']
-      model_str = instrumentation['model']
-      id = instrumentation['id']
+      obj = YAML.load(instrumentation['data'])
 
-      model = Object.const_get(model_str)
-      obj = model.find(id)
+      # model_str = instrumentation['model']
+      # id = instrumentation['id']
+
+      # model = Object.const_get(model_str)
+      # obj = model.find(id)
       target_obj.instance_variable_set(ivar, obj)
     end
 
