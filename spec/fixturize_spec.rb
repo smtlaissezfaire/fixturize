@@ -170,7 +170,7 @@ describe Fixturize do
         end
       rescue => e
       end
-    }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
+    }.to_not change { Fixturize.collection.count }
   end
 
   it "should perform operations in order" do
