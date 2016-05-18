@@ -3,6 +3,7 @@ require 'yaml'
 require 'set'
 require 'method_source'
 require 'digest/sha1'
+require "redis"
 
 class Fixturize
   METHODS_FOR_INSTRUMENTATION = [
@@ -26,6 +27,14 @@ class Fixturize
     attr_writer :database_version
     attr_accessor :relative_path_root
 
+    ABSOLUTE_FIXTURIZE_PREFIX = "__fixturize_"
+
+    def redis
+      @redis ||= Redis.new
+    end
+
+    attr_writer :redis
+
     def enabled?
       enabled ? true : false
     end
@@ -38,33 +47,27 @@ class Fixturize
       @database_version = nil
     end
 
-    def collection_name
-      "fixturize_#{database_version}_"
+    def prefix_key_name
+      "#{ABSOLUTE_FIXTURIZE_PREFIX}#{database_version}"
     end
 
-    def collection
-      if !database
-        raise "Fixturize is not yet setup!  Make sure the database is set!"
-      end
-
-      database.collection(collection_name)
+    def keys
+      redis.keys("#{prefix_key_name}*")
     end
 
     def clear_cache!
-      database.collections.each do |c|
-        if c.name =~ /fixturize_/
-          c.drop
-        end
+      redis.keys("#{prefix_key_name}_*").each do |key|
+        redis.del(key)
       end
     end
 
     def clear_old_versions!
       return unless enabled?
 
-      database.collections.select do |c|
-        c.name =~ /fixturize_/ && c.name != self.collection_name
-      end.each do |c|
-        c.drop
+      redis.keys("#{ABSOLUTE_FIXTURIZE_PREFIX}*").each do |key|
+        if key !~ /^#{prefix_key_name}/
+          redis.del(key)
+        end
       end
     end
 
@@ -73,16 +76,12 @@ class Fixturize
 
       if name
         name = fixture_name(name)
-        collection.remove({ :name => name })
+        redis.del(name)
       else
-        collection.drop()
+        redis.keys("#{prefix_key_name}*").each do |key|
+          redis.del(key)
+        end
       end
-    end
-
-    def index!
-      return unless enabled?
-
-      collection.ensure_index({ :name => Mongo::ASCENDING, :type => Mongo::ASCENDING, :timestamp => Mongo::ASCENDING })
     end
 
     def fixture_name(name = nil, &block)
@@ -105,7 +104,7 @@ class Fixturize
         raise "A name must be given to fixturize"
       end
 
-      name.to_s
+      "#{prefix_key_name}_#{name.to_s}"
     end
 
     def fixturize(name = nil, &block)
@@ -115,12 +114,10 @@ class Fixturize
       name = fixture_name(name, &block)
       self.current_instrumentation = name
 
-      all_instrumentations = collection.
-        find({ :name => name }).
-        sort({ :timestamp => Mongo::ASCENDING }).
-        to_a
+      all_instrumentations = redis.lrange(current_instrumentation, 0, -1)
+      all_instrumentations.map! { |inst| Marshal.load(inst) }
 
-      db_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_DATABASE }
+      db_instrumentations = all_instrumentations.select { |i| i[:type] == INSTRUMENT_DATABASE }
 
       if db_instrumentations.any?
         uninstall!
@@ -129,7 +126,7 @@ class Fixturize
           load_data_from(instrumentation)
         end
 
-        ivar_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_IVARS }
+        ivar_instrumentations = all_instrumentations.select { |i| i[:type] == INSTRUMENT_IVARS }
 
         if ivar_instrumentations.any?
           ivar_instrumentations.each do |instrumentation|
@@ -142,15 +139,14 @@ class Fixturize
     end
 
     def _instrument_database(collection_name, method_name, *args)
-      collection.insert_aliased_from_fixturize({
+      redis.rpush(current_instrumentation, Marshal.dump({
         :type => INSTRUMENT_DATABASE,
         :name => current_instrumentation,
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
-        :args => BSON::Binary.new(Marshal.dump(args)),
+        :args => args,
         :timestamp => Time.now.to_f
-        # :json_args => args.to_json,
-      })
+      }))
     end
 
   private
@@ -161,27 +157,27 @@ class Fixturize
 
         # TODO: Use duck typing?
         if defined?(MongoMapper) && obj.kind_of?(MongoMapper::Document)
-          collection.insert_aliased_from_fixturize({
+          redis.rpush(current_instrumentation, Marshal.dump({
             :type => INSTRUMENT_IVARS,
             :name => current_instrumentation,
             :ivar => ivar,
             :model => obj.class.to_s,
             :id => obj.id,
             :timestamp => Time.now.to_f
-          })
+          }))
         end
       end
     end
 
     def load_data_from(instrumentation)
-      collection = database.collection(instrumentation['collection_name'])
-      collection.send(instrumentation['method_name'], *Marshal.load(instrumentation['args'].to_s))
+      collection = database.collection(instrumentation[:collection_name])
+      collection.send(instrumentation[:method_name], *instrumentation[:args])
     end
 
     def load_ivars_from(instrumentation, target_obj)
-      ivar = instrumentation['ivar']
-      model_str = instrumentation['model']
-      id = instrumentation['id']
+      ivar = instrumentation[:ivar]
+      model_str = instrumentation[:model]
+      id = instrumentation[:id]
 
       model = Object.const_get(model_str)
       obj = model.find(id)
@@ -218,10 +214,7 @@ class Fixturize
       begin
         ret_val = yield
       rescue => e
-        collection.remove_aliased_from_fixturize({
-          :name => current_instrumentation,
-        })
-
+        redis.del(current_instrumentation)
         raise e
       end
 

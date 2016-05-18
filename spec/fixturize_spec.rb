@@ -135,13 +135,13 @@ describe Fixturize do
       @users.insert(:first_name => "Scott")
     end
 
-    old_count = Fixturize.collection.count
+    old_count = Fixturize.keys.count
 
     fixturize "one" do
       @users.insert(:first_name => "Scott")
     end
 
-    new_count = Fixturize.collection.count
+    new_count = Fixturize.keys.count
     expect(new_count).to eq(old_count)
   end
 
@@ -155,10 +155,10 @@ describe Fixturize do
   end
 
   it "should use the version number in the database table name" do
-    expect(Fixturize.collection_name).to eq("fixturize_0_")
+    expect(Fixturize.prefix_key_name).to eq("__fixturize_0")
 
     Fixturize.database_version = 99
-    expect(Fixturize.collection_name).to eq("fixturize_99_")
+    expect(Fixturize.prefix_key_name).to eq("__fixturize_99")
   end
 
   it "should not save data in a block that raises" do
@@ -170,23 +170,23 @@ describe Fixturize do
         end
       rescue => e
       end
-    }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
+    }.to_not change { MongoMapper.database[Fixturize.prefix_key_name].count }
   end
 
-  it "should perform operations in order" do
-    block = lambda {}
-
-    fixturize "in order", &block
-
-    mock_finder = double('finder', :to_a => []).as_null_object
-    allow(Fixturize).to receive(:collection).and_return mock_finder
-
-    expect(mock_finder).to receive(:find)
-    expect(mock_finder).to receive(:sort).with({ :timestamp => 1 }).and_return mock_finder
-    expect(mock_finder).to receive(:to_a)
-
-    fixturize "in order", &block
-  end
+  # it "should perform operations in order" do
+  #   block = lambda {}
+  #
+  #   fixturize "in order", &block
+  #
+  #   mock_finder = double('finder', :to_a => []).as_null_object
+  #   allow(Fixturize).to receive(:collection).and_return mock_finder
+  #
+  #   expect(mock_finder).to receive(:find)
+  #   expect(mock_finder).to receive(:sort).with({ :timestamp => 1 }).and_return mock_finder
+  #   expect(mock_finder).to receive(:to_a)
+  #
+  #   fixturize "in order", &block
+  # end
 
   describe "with ivars" do
     it "should have access to ivars" do
@@ -248,7 +248,7 @@ describe Fixturize do
         @user = User.create(:first_name => "Andrew 1")
       end
 
-      old_count = Fixturize.collection.count
+      old_count = Fixturize.keys.count
 
       @user.destroy
 
@@ -256,7 +256,7 @@ describe Fixturize do
         @user = User.create(:first_name => "Andrew")
       end
 
-      new_count = Fixturize.collection.count
+      new_count = Fixturize.keys.count
 
       expect(new_count).to eq(old_count)
     end
@@ -270,7 +270,7 @@ describe Fixturize do
           end
         rescue => e
         end
-      }.to_not change { MongoMapper.database[Fixturize.collection_name].count }
+      }.to_not change { Fixturize.keys.count }
     end
 
     it "should raise the error of the fixturize block" do
@@ -339,9 +339,9 @@ describe Fixturize do
         @users.insert(:first_name => "Scott")
       end
 
-      expect(Fixturize.collection.count).to eq(1)
+      expect(Fixturize.keys.count).to eq(1)
       Fixturize.clear_cache!
-      expect(Fixturize.collection.count).to eq(0)
+      expect(Fixturize.keys.count).to eq(0)
     end
   end
 
@@ -353,9 +353,9 @@ describe Fixturize do
         @users.insert(:first_name => "Scott")
       end
 
-      expect(Fixturize.collection.count).to eq(1)
+      expect(Fixturize.keys.count).to eq(1)
       Fixturize.clear_old_versions!
-      expect(Fixturize.collection.count).to eq(1)
+      expect(Fixturize.keys.count).to eq(1)
     end
 
     it "should drop data from an old version" do
@@ -365,13 +365,13 @@ describe Fixturize do
         @users.insert(:first_name => "Scott")
       end
 
-      expect(Fixturize.collection.count).to eq(1)
+      expect(Fixturize.keys.count).to eq(1)
 
       Fixturize.database_version = 2
       Fixturize.clear_old_versions!
       Fixturize.database_version = 1
 
-      expect(Fixturize.collection.count).to eq(0)
+      expect(Fixturize.keys.count).to eq(0)
     end
   end
 
@@ -415,17 +415,17 @@ describe Fixturize do
     end
 
     it "should use the name if the name is provided" do
-      expect(fixture_name("foo")).to eq("foo")
+      expect(fixture_name("foo")).to eq("__fixturize_0_foo")
     end
 
     it "should use the name if the name is provided (even if a block is provided)" do
       block = lambda {}
-      expect(fixture_name("foo", &block)).to eq("foo")
+      expect(fixture_name("foo", &block)).to eq("__fixturize_0_foo")
     end
 
     it "should use the block location by default (along with the block source)" do
       block = lambda {}
-      expected_name = "#{__FILE__}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
+      expected_name = "__fixturize_0_#{__FILE__}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
 
       expect(fixture_name(nil, &block)).to eq(expected_name)
     end
@@ -436,17 +436,9 @@ describe Fixturize do
 
       Fixturize.relative_path_root = this_file_dir
       block = lambda {}
-      expected_name = "#{this_file_base_name}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
+      expected_name = "__fixturize_0_#{this_file_base_name}:#{(__LINE__ - 1)}:#{sha1("block = lambda {}")}"
 
       expect(fixture_name(nil, &block)).to eq(expected_name)
-    end
-  end
-
-  describe "index!" do
-    it "should not die" do
-      expect {
-        Fixturize.index!
-      }.not_to raise_error
     end
   end
 end

@@ -4,6 +4,7 @@ ruby '2.2.2'
 
 gem 'mongo'
 gem 'method_source'
+gem 'redis'
 
 group :test do
   gem 'bson_ext'
