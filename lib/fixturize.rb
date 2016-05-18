@@ -115,10 +115,12 @@ class Fixturize
       name = fixture_name(name, &block)
       self.current_instrumentation = name
 
-      db_instrumentations = collection.
-        find({ :name => name, :type => INSTRUMENT_DATABASE }).
+      all_instrumentations = collection.
+        find({ :name => name }).
         sort({ :timestamp => Mongo::ASCENDING }).
         to_a
+
+      db_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_DATABASE }
 
       if db_instrumentations.any?
         uninstall!
@@ -127,10 +129,7 @@ class Fixturize
           load_data_from(instrumentation)
         end
 
-        ivar_instrumentations = collection.
-          find({ :name => name, :type => INSTRUMENT_IVARS }).
-          sort({ :timestamp => Mongo::ASCENDING }).
-          to_a
+        ivar_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_IVARS }
 
         if ivar_instrumentations.any?
           ivar_instrumentations.each do |instrumentation|
