@@ -82,7 +82,10 @@ class Fixturize
     def index!
       return unless enabled?
 
-      collection.ensure_index({ :name => Mongo::ASCENDING, :type => Mongo::ASCENDING, :timestamp => Mongo::ASCENDING })
+      collection.ensure_index({
+        :name => Mongo::ASCENDING,
+        :type => Mongo::ASCENDING,
+      })
     end
 
     def fixture_name(name = nil, &block)
@@ -117,7 +120,7 @@ class Fixturize
 
       all_instrumentations = collection.
         find({ :name => name }).
-        sort({ :timestamp => Mongo::ASCENDING }).
+        sort({ :'$natural' => Mongo::ASCENDING }).
         to_a
 
       db_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_DATABASE }
@@ -148,7 +151,7 @@ class Fixturize
         :collection_name => collection_name.to_s,
         :method_name => method_name.to_s,
         :args => BSON::Binary.new(Marshal.dump(args)),
-        :timestamp => Time.now.to_f
+        :timestamp => Time.now.to_f, # unused, just for reference
         # :json_args => args.to_json,
       })
     end
@@ -167,7 +170,7 @@ class Fixturize
             :ivar => ivar,
             :model => obj.class.to_s,
             :id => obj.id,
-            :timestamp => Time.now.to_f
+            :timestamp => Time.now.to_f, # unused, just for reference
           })
         end
       end
