@@ -182,7 +182,7 @@ describe Fixturize do
     allow(Fixturize).to receive(:collection).and_return mock_finder
 
     expect(mock_finder).to receive(:find)
-    expect(mock_finder).to receive(:sort).with({ :'$natural' => 1 }).and_return mock_finder
+    expect(mock_finder).to receive(:sort).with({ :_id => 1 }).and_return mock_finder
     expect(mock_finder).to receive(:to_a)
 
     fixturize "in order", &block

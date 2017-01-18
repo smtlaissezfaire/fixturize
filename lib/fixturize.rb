@@ -120,7 +120,7 @@ class Fixturize
 
       all_instrumentations = collection.
         find({ :name => name }).
-        sort({ :'$natural' => Mongo::ASCENDING }).
+        sort({ :_id => Mongo::ASCENDING }).
         to_a
 
       db_instrumentations = all_instrumentations.select { |i| i['type'] == INSTRUMENT_DATABASE }
